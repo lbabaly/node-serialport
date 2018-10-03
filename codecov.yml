@@ -1,0 +1,7 @@
+comment:
+  layout: "diff, files"
+  behavior: "once"
+  require_changes: yes
+parsers:
+  javascript:
+    enable_partials: yes

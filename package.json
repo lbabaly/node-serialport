@@ -1,84 +1,59 @@
 {
-  "name": "serialport",
-  "version": "2.0.6",
-  "description": "Welcome your robotic javascript overlords. Better yet, program them!",
-  "author": {
-    "name": "Chris Williams",
-    "email": "voodootikigod@gmail.com",
-    "url": "http://www.voodootikigod.com"
-  },
-  "binary": {
-    "module_name": "serialport",
-    "module_path": "./build/{configuration}/{node_abi}-{platform}-{arch}/",
-    "package_name": "{node_abi}-{platform}-{arch}.tar.gz",
-    "host": "https://github.com/voodootikigod/node-serialport/releases/download/2.0.6"
-  },
-  "main": "./serialport",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/voodootikigod/node-serialport.git"
-  },
-  "maintainers": [
-    {
-      "name": "Jacob Rosenthal",
-      "email": "jakerosenthal@gmail.com"
-    },
-    {
-      "name": "Chris Williams",
-      "email": "voodootikigod@gmail.com"
-    },
-    {
-      "name": "Joe Ferner",
-      "email": "joe.ferner@nearinfinity.com"
-    },
-    {
-      "name": "Jay Beavers",
-      "email": "jay@hikinghomeschoolers.org"
-    },
-    {
-      "name": "Rob Giseburt",
-      "email": "giseburt@gmail.com"
-    },
-    {
-      "name": "Francis Gulotta",
-      "email": "wizard@roborooter.com"
-    }
-  ],
-  "dependencies": {
-    "async": "0.9.0",
-    "bindings": "1.2.1",
-    "debug": "^2.1.1",
-    "nan": "~2.0.0",
-    "node-pre-gyp": "0.6.x",
-    "node-pre-gyp-github": "^1.1.0",
-    "optimist": "~0.6.1",
-    "sf": "0.1.7"
-  },
-  "bundledDependencies": [
-    "node-pre-gyp",
-    "node-pre-gyp-github"
-  ],
-  "devDependencies": {
-    "mocha": "*",
-    "chai": "*",
-    "sinon-chai": "*",
-    "sinon": "*",
-    "grunt": "*",
-    "grunt-cli": "*",
-    "grunt-mocha-test": "*",
-    "grunt-contrib-jshint": "*",
-    "sandboxed-module": "~0.3.0"
-  },
+  "name": "serialport-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Node.js packages to access serial ports, process data from them and speak many protocols",
   "engines": {
-    "node": ">= 0.10.0"
-  },
-  "bin": {
-    "serialportlist": "./bin/serialportList.js",
-    "serialportterm": "./bin/serialportTerminal.js"
+    "node": ">=6.0.0"
   },
   "license": "MIT",
   "scripts": {
-    "install": "node-pre-gyp install --fallback-to-build",
-    "test": "grunt --verbose"
+    "rebuild": "lerna run --stream rebuild",
+    "coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov",
+    "docs": "cd packages/website && npm run build",
+    "docs:dev": "cd packages/website && npm run start",
+    "format": "eslint packages test --fix",
+    "generate": "plop",
+    "lint": "eslint packages test && lerna run --stream lint",
+    "postinstall": "lerna bootstrap --no-ci",
+    "prebuild": "lerna run --stream prebuild",
+    "publish": "lerna publish",
+    "test": "nyc --reporter=html --reporter=text --reporter lcovonly mocha",
+    "test:arduino": "TEST_PORT=$(./bin/find-arduino.js) npm test",
+    "test:watch": "mocha -w"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/node-serialport/node-serialport.git"
+  },
+  "maintainers": [
+    {
+      "name": "Francis Gulotta",
+      "email": "wizard@roborooter.com",
+      "url": "https://www.roborooter.com"
+    }
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "bluebird": "^3.5.2",
+    "cc": "^1.0.1",
+    "chai": "^4.0.2",
+    "chai-subset": "^1.5.0",
+    "codecov": "^3.1.0",
+    "eslint": "^5.6.0",
+    "eslint-config-prettier": "^3.0.1",
+    "eslint-plugin-import": "^2.14.0",
+    "eslint-plugin-node": "^7.0.1",
+    "eslint-plugin-prettier": "^2.6.2",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-react": "^7.11.1",
+    "lerna": "^3.4.0",
+    "mocha": "^5.2.0",
+    "nyc": "^13.0.1",
+    "plop": "^2.1.0",
+    "prebuild": "^8.0.0",
+    "prettier": "^1.14.2",
+    "proxyquire": "^2.1.0",
+    "sinon": "^6.3.3"
   }
 }
