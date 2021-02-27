@@ -2,29 +2,20 @@
 
 
 const SerialPort = require('../../');
-const Promise = require('bluebird');
 const fs = require('fs');
 const Path = require('path');
 
-function findArduino() {
-  return new Promise((resolve, reject) => {
-    if (process.argv[2]) {
-      return resolve(process.argv[2]);
+async function findArduino() {
+  if (process.argv[2]) {
+    return process.argv[2]
+  }
+  const ports = await SerialPort.list()
+  for (const port of ports) {
+    if (/arduino/i.test(port.manufacturer)) {
+      return port.path
     }
-    SerialPort.list((err, ports) => {
-      if (err) { return reject(err) }
-      let resolved = false;
-      ports.forEach((port) => {
-        if (!resolved && /arduino/i.test(port.manufacturer)) {
-          resolved = true;
-          return resolve(port.comName);
-        }
-      });
-      if (!resolved) {
-        reject(new Error('No arduinos found'));
-      }
-    });
-  });
+  }
+  throw new Error('No arduinos found')
 }
 
 function writeAllCommands(port) {
@@ -64,10 +55,10 @@ function writeOneCommandAtATime(port) {
   });
 }
 
-function writeAndDrain(port) {
-  const command = commands.pop();
+async function writeAndDrain(port) {
+  const command = commands.pop()
   if (!command) {
-    return Promise.resolve(port);
+    return port
   }
   const commandNumber = commandCount - commands.length;
   return new Promise((resolve, reject) => {
@@ -101,7 +92,7 @@ findArduino()
   })
   .then((port) => {
     console.log('delaying 3 seconds');
-    return Promise.delay(3000, port);
+    return new Promise(resolve => setTimeout(() => resolve(port), 3000));
   })
   .then(writeAllCommands) // broken?
   // .then(writeOneCommandAtATime)

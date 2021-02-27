@@ -95,7 +95,7 @@ void EIO_Open(uv_work_t* req) {
   data->result = fd;
 }
 
-int setBaudRate(ConnectionOptionsBaton *data) {
+int setBaudRate(ConnectionOptions *data) {
   // lookup the standard baudrates from the table
   int baudRate = ToBaudConstant(data->baudRate);
   int fd = data->fd;
@@ -281,7 +281,7 @@ int setup(int fd, OpenBaton *data) {
   }
 
   // Copy the connection options into the ConnectionOptionsBaton to set the baud rate
-  ConnectionOptionsBaton* connectionOptions = new ConnectionOptionsBaton();
+  ConnectionOptions* connectionOptions = new ConnectionOptions();
   connectionOptions->fd = fd;
   connectionOptions->baudRate = data->baudRate;
 
@@ -332,6 +332,17 @@ void EIO_Set(uv_work_t* req) {
     bits |= TIOCM_DSR;
   }
 
+  #if defined(__linux__)
+  int err = linuxSetLowLatencyMode(data->fd, data->lowLatency);
+  if (err == -1) {
+    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot get", strerror(errno));
+    return;
+  } else if(err == -2) {
+    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot set", strerror(errno));
+    return;
+  }
+  #endif
+
   int result = 0;
   if (data->brk) {
     result = ioctl(data->fd, TIOCSBRK, NULL);
@@ -359,6 +370,16 @@ void EIO_Get(uv_work_t* req) {
     return;
   }
 
+  data->lowLatency = false;
+  #if defined(__linux__) && defined(ASYNC_LOW_LATENCY)
+  int latency_bits;
+  if (-1 == ioctl(data->fd, TIOCGSERIAL, &latency_bits)) {
+    snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot get", strerror(errno));
+    return;
+  }
+  data->lowLatency = latency_bits & ASYNC_LOW_LATENCY;
+  #endif
+
   data->cts = bits & TIOCM_CTS;
   data->dsr = bits & TIOCM_DSR;
   data->dcd = bits & TIOCM_CD;
@@ -366,18 +387,15 @@ void EIO_Get(uv_work_t* req) {
 
 void EIO_GetBaudRate(uv_work_t* req) {
   GetBaudRateBaton* data = static_cast<GetBaudRateBaton*>(req->data);
-  int outbaud;
+  int outbaud = -1;
 
   #if defined(__linux__) && defined(ASYNC_SPD_CUST)
   if (-1 == linuxGetSystemBaudRate(data->fd, &outbaud)) {
     snprintf(data->errorString, sizeof(data->errorString), "Error: %s, cannot get baud rate", strerror(errno));
     return;
   }
-  #endif
-
-  // TODO(Fumon) implement on mac
-  #if defined(MAC_OS_X_VERSION_10_4) && (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_4)
-  snprintf(data->errorString, sizeof(data->errorString), "Error: System baud rate check not implemented on darwin");
+  #else
+  snprintf(data->errorString, sizeof(data->errorString), "Error: System baud rate check not implemented on this platform");
   return;
   #endif
 

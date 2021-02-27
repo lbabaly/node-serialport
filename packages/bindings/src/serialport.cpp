@@ -38,14 +38,14 @@ NAN_METHOD(Open) {
     Nan::ThrowTypeError("First argument must be a string");
     return;
   }
-  v8::String::Utf8Value path(info[0]->ToString());
+  Nan::Utf8String path(info[0]);
 
   // options
   if (!info[1]->IsObject()) {
     Nan::ThrowTypeError("Second argument must be an object");
     return;
   }
-  v8::Local<v8::Object> options = info[1]->ToObject();
+  v8::Local<v8::Object> options = Nan::To<v8::Object>(info[1]).ToLocalChecked();
 
   // callback
   if (!info[2]->IsFunction()) {
@@ -92,7 +92,7 @@ void EIO_AfterOpen(uv_work_t* req) {
     argv[1] = Nan::New<v8::Int32>(data->result);
   }
 
-  data->callback.Call(2, argv);
+  data->callback.Call(2, argv, data);
   delete data;
   delete req;
 }
@@ -110,7 +110,7 @@ NAN_METHOD(Update) {
     Nan::ThrowTypeError("Second argument must be an object");
     return;
   }
-  v8::Local<v8::Object> options = info[1]->ToObject();
+  v8::Local<v8::Object> options = Nan::To<v8::Object>(info[1]).ToLocalChecked();
 
   if (!Nan::Has(options, Nan::New<v8::String>("baudRate").ToLocalChecked()).FromMaybe(false)) {
     Nan::ThrowTypeError("\"baudRate\" must be set on options object");
@@ -147,7 +147,7 @@ void EIO_AfterUpdate(uv_work_t* req) {
     argv[0] = Nan::Null();
   }
 
-  data->callback.Call(1, argv);
+  data->callback.Call(1, argv, data);
 
   delete data;
   delete req;
@@ -185,7 +185,7 @@ void EIO_AfterClose(uv_work_t* req) {
   } else {
     argv[0] = Nan::Null();
   }
-  data->callback.Call(1, argv);
+  data->callback.Call(1, argv, data);
 
   delete data;
   delete req;
@@ -228,7 +228,7 @@ void EIO_AfterFlush(uv_work_t* req) {
     argv[0] = Nan::Null();
   }
 
-  data->callback.Call(1, argv);
+  data->callback.Call(1, argv, data);
 
   delete data;
   delete req;
@@ -247,7 +247,7 @@ NAN_METHOD(Set) {
     Nan::ThrowTypeError("Second argument must be an object");
     return;
   }
-  v8::Local<v8::Object> options = info[1]->ToObject();
+  v8::Local<v8::Object> options = Nan::To<v8::Object>(info[1]).ToLocalChecked();
 
   // callback
   if (!info[2]->IsFunction()) {
@@ -264,6 +264,7 @@ NAN_METHOD(Set) {
   baton->cts = getBoolFromObject(options, "cts");
   baton->dtr = getBoolFromObject(options, "dtr");
   baton->dsr = getBoolFromObject(options, "dsr");
+  baton->lowLatency = getBoolFromObject(options, "lowLatency");
 
   uv_work_t* req = new uv_work_t();
   req->data = baton;
@@ -282,7 +283,7 @@ void EIO_AfterSet(uv_work_t* req) {
   } else {
     argv[0] = Nan::Null();
   }
-  data->callback.Call(1, argv);
+  data->callback.Call(1, argv, data);
 
   delete data;
   delete req;
@@ -307,6 +308,7 @@ NAN_METHOD(Get) {
   baton->cts = false;
   baton->dsr = false;
   baton->dcd = false;
+  baton->lowLatency = false;
   baton->callback.Reset(info[1].As<v8::Function>());
 
   uv_work_t* req = new uv_work_t();
@@ -326,14 +328,15 @@ void EIO_AfterGet(uv_work_t* req) {
     argv[1] = Nan::Undefined();
   } else {
     v8::Local<v8::Object> results = Nan::New<v8::Object>();
-    results->Set(Nan::New<v8::String>("cts").ToLocalChecked(), Nan::New<v8::Boolean>(data->cts));
-    results->Set(Nan::New<v8::String>("dsr").ToLocalChecked(), Nan::New<v8::Boolean>(data->dsr));
-    results->Set(Nan::New<v8::String>("dcd").ToLocalChecked(), Nan::New<v8::Boolean>(data->dcd));
+    Nan::Set(results, Nan::New<v8::String>("cts").ToLocalChecked(), Nan::New<v8::Boolean>(data->cts));
+    Nan::Set(results, Nan::New<v8::String>("dsr").ToLocalChecked(), Nan::New<v8::Boolean>(data->dsr));
+    Nan::Set(results, Nan::New<v8::String>("dcd").ToLocalChecked(), Nan::New<v8::Boolean>(data->dcd));
+    Nan::Set(results, Nan::New<v8::String>("lowLatency").ToLocalChecked(), Nan::New<v8::Boolean>(data->lowLatency));
 
     argv[0] = Nan::Null();
     argv[1] = results;
   }
-  data->callback.Call(2, argv);
+  data->callback.Call(2, argv, data);
 
   delete data;
   delete req;
@@ -375,12 +378,12 @@ void EIO_AfterGetBaudRate(uv_work_t* req) {
     argv[1] = Nan::Undefined();
   } else {
     v8::Local<v8::Object> results = Nan::New<v8::Object>();
-    results->Set(Nan::New<v8::String>("baudRate").ToLocalChecked(), Nan::New<v8::Integer>(data->baudRate));
+    Nan::Set(results, Nan::New<v8::String>("baudRate").ToLocalChecked(), Nan::New<v8::Integer>(data->baudRate));
 
     argv[0] = Nan::Null();
     argv[1] = results;
   }
-  data->callback.Call(2, argv);
+  data->callback.Call(2, argv, data);
 
   delete data;
   delete req;
@@ -421,7 +424,7 @@ void EIO_AfterDrain(uv_work_t* req) {
   } else {
     argv[0] = Nan::Null();
   }
-  data->callback.Call(1, argv);
+  data->callback.Call(1, argv, data);
 
   delete data;
   delete req;
@@ -456,30 +459,28 @@ SerialPortStopBits NAN_INLINE(ToStopBitEnum(double stopBits)) {
   return SERIALPORT_STOPBITS_ONE;
 }
 
-extern "C" {
-  void init(v8::Handle<v8::Object> target) {
-    Nan::HandleScope scope;
-    Nan::SetMethod(target, "set", Set);
-    Nan::SetMethod(target, "get", Get);
-    Nan::SetMethod(target, "getBaudRate", GetBaudRate);
-    Nan::SetMethod(target, "open", Open);
-    Nan::SetMethod(target, "update", Update);
-    Nan::SetMethod(target, "close", Close);
-    Nan::SetMethod(target, "flush", Flush);
-    Nan::SetMethod(target, "drain", Drain);
+NAN_MODULE_INIT(init) {
+  Nan::HandleScope scope;
+  Nan::SetMethod(target, "set", Set);
+  Nan::SetMethod(target, "get", Get);
+  Nan::SetMethod(target, "getBaudRate", GetBaudRate);
+  Nan::SetMethod(target, "open", Open);
+  Nan::SetMethod(target, "update", Update);
+  Nan::SetMethod(target, "close", Close);
+  Nan::SetMethod(target, "flush", Flush);
+  Nan::SetMethod(target, "drain", Drain);
 
-    #ifdef __APPLE__
-    Nan::SetMethod(target, "list", List);
-    #endif
+  #ifdef __APPLE__
+  Nan::SetMethod(target, "list", List);
+  #endif
 
-    #ifdef WIN32
-    Nan::SetMethod(target, "write", Write);
-    Nan::SetMethod(target, "read", Read);
-    Nan::SetMethod(target, "list", List);
-    #else
-    Poller::Init(target);
-    #endif
-  }
+  #ifdef WIN32
+  Nan::SetMethod(target, "write", Write);
+  Nan::SetMethod(target, "read", Read);
+  Nan::SetMethod(target, "list", List);
+  #else
+  Poller::Init(target);
+  #endif
 }
 
 NODE_MODULE(serialport, init);

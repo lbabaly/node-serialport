@@ -1,15 +1,15 @@
 {
   "name": "@serialport/binding-abstract",
-  "version": "2.0.1",
-  "main": "binding-abstract.js",
+  "version": "9.0.7",
+  "main": "lib",
   "keywords": [
     "serialport-binding"
   ],
   "dependencies": {
-    "debug": "^4.0.1"
+    "debug": "^4.3.1"
   },
   "engines": {
-    "node": ">=6.0.0"
+    "node": ">=10.0.0"
   },
   "publishConfig": {
     "access": "public"
@@ -17,6 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/node-serialport/node-serialport.git"
-  }
+    "url": "git://github.com/serialport/node-serialport.git"
+  },
+  "funding": "https://opencollective.com/serialport/donate"
 }

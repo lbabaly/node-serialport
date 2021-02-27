@@ -1,5 +1,4 @@
 {
-  "lerna": "3.1.4",
   "packages": [
     "packages/*"
   ],
@@ -8,5 +7,5 @@
       "conventionalCommits": true
     }
   },
-  "version": "independent"
+  "version": "9.0.7"
 }

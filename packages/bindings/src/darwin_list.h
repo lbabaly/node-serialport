@@ -12,7 +12,7 @@ void EIO_List(uv_work_t* req);
 void EIO_AfterList(uv_work_t* req);
 
 struct ListResultItem {
-  std::string comName;
+  std::string path;
   std::string manufacturer;
   std::string serialNumber;
   std::string pnpId;
@@ -21,7 +21,8 @@ struct ListResultItem {
   std::string productId;
 };
 
-struct ListBaton {
+struct ListBaton : public Nan::AsyncResource {
+  ListBaton() : AsyncResource("node-serialport:ListBaton"), errorString() {}
   Nan::Callback callback;
   std::list<ListResultItem*> results;
   char errorString[ERROR_STRING_SIZE];
